@@ -224,13 +224,15 @@ function new_client(client)
 				name = name:sub(1, #name - 1)
 			end
 			function get_ip(name, dns_packet)
-				for _, answer in pairs(dns_packet.answers) do
-					if os.difftime(os.time(), dns_packet.time) <= answer.ttl and
-					   answer.name == name then
-						if answer.ip and answer.type == 1 then
-							return answer.ip
-						elseif answer.cname and answer.type == 5 then
-							return get_ip(answer.cname, dns_packet)
+				if type(dns_packet.answers) == "table" then
+					for _, answer in pairs(dns_packet.answers) do
+						if os.difftime(os.time(), dns_packet.time) <= answer.ttl and
+						   answer.name == name then
+							if answer.ip and answer.type == 1 then
+								return answer.ip
+							elseif answer.cname and answer.type == 5 then
+								return get_ip(answer.cname, dns_packet)
+							end
 						end
 					end
 				end
@@ -345,8 +347,10 @@ function new_client(client)
 	local port = header:byte(next_pos) * 256 + header:byte(next_pos + 1)
 	print("port:", port)
 	
-	ip = ip or to_ip(address)
-	local server = connect_to(ip, port)
+	if address:sub(-6)~=".local" and address:sub(-9)~="localhost" then
+		ip = ip or to_ip(address)
+	end
+	local server = connect_to(ip or address, port)
 	if (server) then
 		client:send("\5\0\0\1\0\0\0\0\0\0")
 		print("conected to:", address, port)
